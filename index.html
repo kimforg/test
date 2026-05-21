@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 추천 전략 성과 비교 대시보드</title>
+    <style>
+        body {
+            font-family: 'Pretendard', 'Malgun Gothic', sans-serif;
+            background-color: #ffffff;
+            margin: 0;
+            padding: 40px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .dashboard {
+            width: 100%;
+            max-width: 900px;
+            border: 1px solid #eaeaea;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }
+
+        /* Top Header & Metrics */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 20px;
+        }
+
+        .header h2 {
+            margin: 0;
+            font-size: 20px;
+            color: #333;
+        }
+
+        .metrics {
+            display: flex;
+            gap: 30px;
+        }
+
+        .metric {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .metric span {
+            font-size: 11px;
+            color: #888;
+            margin-bottom: 4px;
+        }
+
+        .metric strong {
+            font-size: 18px;
+            color: #111;
+            font-family: monospace;
+        }
+
+        /* Visualization Area */
+        .viz-container {
+            position: relative;
+            background-color: #f4f6f9;
+            height: 250px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .badge {
+            position: absolute;
+            top: 20px;
+            background: white;
+            border: 1px solid #ddd;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            color: #555;
+            z-index: 10;
+        }
+        .badge.left { left: 20px; }
+        .badge.right { right: 20px; color: #2e7d32; border-color: #2e7d32; }
+
+        /* Central Node */
+        .center-node {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 5;
+        }
+
+        .circle {
+            width: 80px;
+            height: 80px;
+            background: #fff;
+            border: 3px solid #1a73e8;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 30px rgba(26, 115, 232, 0.4);
+            position: relative;
+        }
+
+        .circle::before {
+            content: '';
+            position: absolute;
+            width: 120%;
+            height: 120%;
+            border-radius: 50%;
+            border: 1px solid rgba(26, 115, 232, 0.2);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
+
+        .circle svg {
+            width: 40px;
+            height: 40px;
+            fill: none;
+            stroke: #1a73e8;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .node-label {
+            margin-top: 12px;
+            font-size: 13px;
+            font-weight: bold;
+            color: #111;
+        }
+
+        /* Dots */
+        .dot {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background-color: #1a73e8;
+            border-radius: 50%;
+            opacity: 0.8;
+        }
+
+        /* Bottom Chart Section */
+        .chart-section {
+            border-top: 1px solid #eaeaea;
+            padding-top: 20px;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .chart-header h3 {
+            margin: 0;
+            font-size: 15px;
+            color: #333;
+        }
+
+        .legend {
+            display: flex;
+            gap: 15px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+        }
+
+        .color-ml { background: #fbc02d; }
+        .color-llm { background: #d32f2f; }
+        .color-hybrid { background: #1a73e8; }
+
+        /* Controls & Bars */
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        input[type="range"] {
+            flex-grow: 1;
+            cursor: pointer;
+        }
+
+        .visitors-count {
+            font-weight: bold;
+            font-size: 14px;
+            color: #1a73e8;
+            min-width: 120px;
+            text-align: right;
+        }
+
+        .bar-chart {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .bar-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .bar-label {
+            width: 100px;
+            font-size: 12px;
+            color: #555;
+            text-align: right;
+        }
+
+        .bar-track {
+            flex-grow: 1;
+            background: #f0f0f0;
+            height: 20px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+
+        .bar-value {
+            width: 120px;
+            font-size: 12px;
+            font-family: monospace;
+            text-align: right;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="dashboard">
+    <div class="header">
+        <h2>AI 추천 전략 성과 비교 대시보드</h2>
+        <div class="metrics">
+            <div class="metric">
+                <span>예상 전환율</span>
+                <strong id="m-cvr">5.8%</strong>
+            </div>
+            <div class="metric">
+                <span>평균 응답 속도</span>
+                <strong id="m-latency">141 ms</strong>
+            </div>
+            <div class="metric">
+                <span>월간 예상 비용</span>
+                <strong id="m-cost">₩135,000,000</strong>
+            </div>
+        </div>
+    </div>
+
+    <div class="viz-container" id="viz-area">
+        <div class="badge left">사용자 유입</div>
+        <div class="badge right">구매 전환</div>
+        
+        <div class="center-node">
+            <div class="circle">
+                <svg viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <circle cx="19" cy="5" r="2"></circle>
+                    <circle cx="5" cy="5" r="2"></circle>
+                    <circle cx="19" cy="19" r="2"></circle>
+                    <circle cx="5" cy="19" r="2"></circle>
+                    <path d="M14 10l3.5-3.5M10 10L6.5 6.5M14 14l3.5 3.5M10 14l-3.5 3.5"></path>
+                </svg>
+            </div>
+            <div class="node-label">하이브리드 AI 추천(제안)</div>
+        </div>
+    </div>
+
+    <div class="chart-section">
+        <div class="chart-header">
+            <h3>방문자 수에 따른 월간 비용 시뮬레이션 (단위: 원)</h3>
+            <div class="legend">
+                <div class="legend-item"><div class="legend-color color-ml"></div> 기존 ML</div>
+                <div class="legend-item"><div class="legend-color color-llm"></div> 100% LLM</div>
+                <div class="legend-item"><div class="legend-color color-hybrid"></div> 하이브리드(제안)</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <input type="range" id="traffic-slider" min="10000" max="2000000" step="10000" value="1000000">
+            <div class="visitors-count">방문자: <span id="traffic-val">1,000,000</span>명</div>
+        </div>
+
+        <div class="bar-chart">
+            <div class="bar-row">
+                <div class="bar-label">기존 ML</div>
+                <div class="bar-track"><div class="bar-fill color-ml" id="bar-ml" style="width: 5%;"></div></div>
+                <div class="bar-value" id="val-ml">₩35,000,000</div>
+            </div>
+            <div class="bar-row">
+                <div class="bar-label">100% LLM</div>
+                <div class="bar-track"><div class="bar-fill color-llm" id="bar-llm" style="width: 90%;"></div></div>
+                <div class="bar-value" id="val-llm" style="color: #d32f2f; font-weight: bold;">₩850,000,000</div>
+            </div>
+            <div class="bar-row">
+                <div class="bar-label">하이브리드</div>
+                <div class="bar-track"><div class="bar-fill color-hybrid" id="bar-hybrid" style="width: 15%;"></div></div>
+                <div class="bar-value" id="val-hybrid">₩135,000,000</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 1. 배경 파란 점(데이터) 랜덤 생성
+    const vizArea = document.getElementById('viz-area');
+    for(let i = 0; i < 40; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'dot';
+        dot.style.left = Math.random() * 90 + 5 + '%';
+        dot.style.top = Math.random() * 80 + 10 + '%';
+        // 중앙 노드 가리지 않게 투명도 조절
+        dot.style.opacity = Math.random() * 0.6 + 0.2;
+        vizArea.appendChild(dot);
+    }
+
+    // 2. 슬라이더 연동 시뮬레이션 로직
+    const slider = document.getElementById('traffic-slider');
+    const trafficVal = document.getElementById('traffic-val');
+    
+    // 지표 업데이트 DOM
+    const mCvr = document.getElementById('m-cvr');
+    const mLatency = document.getElementById('m-latency');
+    const mCost = document.getElementById('m-cost');
+
+    // 차트 업데이트 DOM
+    const barMl = document.getElementById('bar-ml');
+    const barLlm = document.getElementById('bar-llm');
+    const barHybrid = document.getElementById('bar-hybrid');
+    const valMl = document.getElementById('val-ml');
+    const valLlm = document.getElementById('val-llm');
+    const valHybrid = document.getElementById('val-hybrid');
+
+    function updateDashboard() {
+        const visitors = parseInt(slider.value);
+        trafficVal.innerText = visitors.toLocaleString();
+
+        // [비용 계산 로직]
+        const costMl = visitors * 35; 
+        const costLlm = visitors * 850; 
+        const costHybrid = visitors * 135; 
+
+        // [상단 하이브리드 지표 업데이트]
+        // 전환율은 트래픽에 따라 약간 변동되게 설정 (5.5% ~ 6.0%)
+        const cvr = (5.5 + (visitors / 4000000)).toFixed(1);
+        mCvr.innerText = cvr + '%';
+        
+        // 지연시간은 트래픽 증가시 조금씩 늘어남
+        const latency = Math.floor(120 + (visitors / 50000));
+        mLatency.innerText = latency + ' ms';
+        mCost.innerText = '₩' + costHybrid.toLocaleString();
+
+        // [하단 차트 업데이트]
+        valMl.innerText = '₩' + costMl.toLocaleString();
+        valLlm.innerText = '₩' + costLlm.toLocaleString();
+        valHybrid.innerText = '₩' + costHybrid.toLocaleString();
+
+        // Max 비용 기준을 100% LLM의 최대치(약 17억)로 설정하여 게이지 바 Width 계산
+        const maxCost = 2000000 * 850; 
+        
+        barMl.style.width = Math.max((costMl / maxCost) * 100, 1) + '%';
+        barLlm.style.width = Math.max((costLlm / maxCost) * 100, 1) + '%';
+        barHybrid.style.width = Math.max((costHybrid / maxCost) * 100, 1) + '%';
+    }
+
+    slider.addEventListener('input', updateDashboard);
+    
+    // 초기화
+    updateDashboard();
+</script>
+
+</body>
+</html>
