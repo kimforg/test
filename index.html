@@ -1,403 +1,218 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 추천 전략 성과 비교 대시보드</title>
-    <style>
-        body {
-            font-family: 'Pretendard', 'Malgun Gothic', sans-serif;
-            background-color: #ffffff;
-            margin: 0;
-            padding: 40px;
-            display: flex;
-            justify-content: center;
-        }
+import streamlit as st
 
-        .dashboard {
-            width: 100%;
-            max-width: 900px;
-            border: 1px solid #eaeaea;
-            border-radius: 16px;
-            padding: 30px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
-        }
+# 페이지 레이아웃 설정
+st.set_page_config(layout="wide", page_title="AI 추천 전략 대시보드")
 
-        /* Top Header & Metrics */
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            margin-bottom: 20px;
-        }
+st.title("📊 AI 추천 전략 성과 비교 대시보드")
+st.caption("기존 ML, 100% LLM, 그리고 하이브리드 AI 전략의 비용 및 성능을 실시간으로 비교합니다.")
 
-        .header h2 {
-            margin: 0;
-            font-size: 20px;
-            color: #333;
-        }
+# ------------------------------------------------------------------
+# 1. 상단 전략 선택 (라디오 버튼을 통해 3가지 모드 전환)
+# ------------------------------------------------------------------
+st.markdown("### 🎯 추천 전략 선택")
+selected_strategy = st.radio(
+    "화면에서 확인할 AI 추천 전략을 선택하세요:",
+    ["기존 ML", "100% LLM", "하이브리드(제안)"],
+    horizontal=True
+)
 
-        .metrics {
-            display: flex;
-            gap: 30px;
-        }
+# 전략별 고정 성능 데이터 (하이브리드의 장점을 극대화하여 비교)
+strategy_metrics = {
+    "기존 ML": {"conversion": "2.1%", "latency": "450 ms", "cost_desc": "저비용 / 저효율"},
+    "100% LLM": {"conversion": "6.0%", "latency": "1,800 ms", "cost_desc": "초고비용 / 병목현상 심함"},
+    "하이브리드(제안)": {"conversion": "5.8%", "latency": "140 ms", "cost_desc": "합리적 비용 / 초고속"}
+}
 
-        .metric {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-        }
+# 하단 슬라이더 연동을 위해 방문자 수 슬라이더를 먼저 선언합니다.
+st.markdown("---")
+st.subheader("💵 방문자 수에 따른 월간 비용 시뮬레이션 (단위: 원)")
+visitor_count = st.slider("방문자 수 설정 (명)", min_value=100000, max_value=2000000, value=1030000, step=10000)
 
-        .metric span {
-            font-size: 11px;
-            color: #888;
-            margin-bottom: 4px;
-        }
+# 비용 계산 로직 (기존 비율 유지)
+ml_cost = int(visitor_count * 35)
+llm_cost = int(visitor_count * 850)
+hybrid_cost = int(visitor_count * 135)
 
-        .metric strong {
-            font-size: 18px;
-            color: #111;
-            font-family: monospace;
-        }
+# 현재 선택된 전략의 비용 확정
+if selected_strategy == "기존 ML":
+    current_cost = ml_cost
+elif selected_strategy == "100% LLM":
+    current_cost = llm_cost
+else:
+    current_cost = hybrid_cost
 
-        /* Visualization Area */
-        .viz-container {
-            position: relative;
-            background-color: #f4f6f9;
-            height: 250px;
-            border-radius: 12px;
-            margin-bottom: 30px;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+# ------------------------------------------------------------------
+# 2. 최상단 실시간 메트릭 표시 (선택된 전략에 따라 변동)
+# ------------------------------------------------------------------
+st.markdown("### 📈 선택된 전략의 실시간 기대 성과")
+col1, col2, col3 = st.columns(3)
+with col1:
+    st.metric(label="예상 전환율", value=strategy_metrics[selected_strategy]["conversion"])
+with col2:
+    st.metric(label="평균 응답 속도", value=strategy_metrics[selected_strategy]["latency"])
+with col3:
+    st.metric(label="월간 예상 비용", value=f"₩{current_cost:,}")
 
-        .badge {
-            position: absolute;
-            top: 20px;
-            background: white;
-            border: 1px solid #ddd;
-            padding: 6px 16px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-            color: #555;
-            z-index: 10;
-        }
-        .badge.left { left: 20px; }
-        .badge.right { right: 20px; color: #2e7d32; border-color: #2e7d32; }
+# ------------------------------------------------------------------
+# 3. 정보 흐름 시각화 시뮬레이션 (CSS 애니메이션 핵심 구문)
+# ------------------------------------------------------------------
+st.markdown("### 🔄 데이터 흐름 및 처리 속도 비교")
 
-        /* Central Node */
-        .center-node {
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            z-index: 5;
-        }
+# 선택된 전략에 따른 CSS 클래스 매핑
+animation_class = ""
+if selected_strategy == "기존 ML":
+    animation_class = "ml-flow"
+elif selected_strategy == "100% LLM":
+    animation_class = "llm-flow"
+else:
+    animation_class = "hybrid-flow"
 
-        .circle {
-            width: 80px;
-            height: 80px;
-            background: #fff;
-            border: 3px solid #1a73e8;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 0 30px rgba(26, 115, 232, 0.4);
-            position: relative;
-        }
+# CSS 및 HTML 주입
+st.markdown(f"""
+<style>
+.flow-container {{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #fdfdfd;
+    padding: 50px 80px;
+    border-radius: 20px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    border: 1px solid #eaeaea;
+    margin-bottom: 20px;
+}}
+.flow-node {{
+    background: #ffffff;
+    padding: 18px 30px;
+    border-radius: 30px;
+    font-weight: bold;
+    font-size: 16px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+    z-index: 2;
+    border: 2px solid #e0e0e0;
+}}
+.center-node {{
+    background: #f5f5f5;
+    border: 2px solid #9e9e9e;
+    color: #333333;
+    transition: all 0.3s ease;
+}}
+/* 하이브리드 전략일 때 중앙 노드 강조 */
+.hybrid-node {{
+    background: #e3f2fd !important;
+    border: 2px solid #2196f3 !important;
+    color: #0d47a1 !important;
+    box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3) !important;
+}}
 
-        .circle::before {
-            content: '';
-            position: absolute;
-            width: 120%;
-            height: 120%;
-            border-radius: 50%;
-            border: 1px solid rgba(26, 115, 232, 0.2);
-            animation: pulse 2s infinite;
-        }
+/* 정보 입자 (파란색 구체) 기본 스타일 */
+.info-particle {{
+    position: absolute;
+    top: 52%;
+    width: 14px;
+    height: 14px;
+    background-color: #2196f3;
+    border-radius: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
+    box-shadow: 0 0 10px #2196f3;
+}}
 
-        @keyframes pulse {
-            0% { transform: scale(1); opacity: 1; }
-            100% { transform: scale(1.5); opacity: 0; }
-        }
+/* 1. 기존 ML: 정보가 일정하게 느린 속도로 지나감 (6초) */
+.ml-flow {{
+    animation: moveLinear 6s infinite linear;
+}}
 
-        .circle svg {
-            width: 40px;
-            height: 40px;
-            fill: none;
-            stroke: #1a73e8;
-            stroke-width: 2;
-            stroke-linecap: round;
-            stroke-linejoin: round;
-        }
+/* 2. 하이브리드: 정보가 매우 빠르게 통과함 (1초) */
+.hybrid-flow {{
+    animation: moveLinear 1s infinite linear;
+    background-color: #00e676 !important; /* 하이브리드는 입자 색상도 더 밝게 강조 */
+    box-shadow: 0 0 12px #00e676 !important;
+}}
 
-        .node-label {
-            margin-top: 12px;
-            font-size: 13px;
-            font-weight: bold;
-            color: #111;
-        }
+/* 3. 100% LLM: 중간에 멈추고 버벅거리다가 지나감 (4초) */
+.llm-flow {{
+    animation: moveStutter 4s infinite ease-in-out;
+    background-color: #ff1744 !important; /* LLM 병목은 붉은 빛으로 경고 효과 */
+    box-shadow: 0 0 12px #ff1744 !important;
+}}
 
-        /* Dots */
-        .dot {
-            position: absolute;
-            width: 6px;
-            height: 6px;
-            background-color: #1a73e8;
-            border-radius: 50%;
-            opacity: 0.8;
-        }
+/* 여러 개의 정보가 연속적으로 보이도록 딜레이 설정 */
+.p2 {{ animation-delay: 0.3s; }}
+.p3 {{ animation-delay: 0.6s; }}
+.p4 {{ animation-delay: 0.9s; }}
 
-        /* Bottom Chart Section */
-        .chart-section {
-            border-top: 1px solid #eaeaea;
-            padding-top: 20px;
-        }
+/* 기본 선형 이동 키프레임 (기존 ML 및 하이브리드용) */
+@keyframes moveLinear {{
+    0% {{ left: 10%; opacity: 0; }}
+    10% {{ opacity: 1; }}
+    90% {{ opacity: 1; }}
+    100% {{ left: 90%; opacity: 0; }}
+}}
 
-        .chart-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
+/* 버벅거림/끊김 현상 키프레임 (100% LLM용) */
+@keyframes moveStutter {{
+    0% {{ left: 10%; opacity: 0; }}
+    10% {{ opacity: 1; }}
+    /* 35%~70% 구간에서 중앙 노드 근처에 걸려 버벅거리는 효과 구현 */
+    35% {{ left: 45%; }}
+    45% {{ left: 43%; }} /* 살짝 뒤로 밀리는 렉(Lag) 현상 표현 */
+    60% {{ left: 48%; }}
+    70% {{ left: 46%; }} /* 한 번 더 출렁임 */
+    85% {{ left: 55%; }}
+    100% {{ left: 90%; opacity: 0; }}
+}}
+</style>
 
-        .chart-header h3 {
-            margin: 0;
-            font-size: 15px;
-            color: #333;
-        }
-
-        .legend {
-            display: flex;
-            gap: 15px;
-            font-size: 12px;
-            color: #666;
-        }
-
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .legend-color {
-            width: 12px;
-            height: 12px;
-            border-radius: 2px;
-        }
-
-        .color-ml { background: #fbc02d; }
-        .color-llm { background: #d32f2f; }
-        .color-hybrid { background: #1a73e8; }
-
-        /* Controls & Bars */
-        .controls {
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        input[type="range"] {
-            flex-grow: 1;
-            cursor: pointer;
-        }
-
-        .visitors-count {
-            font-weight: bold;
-            font-size: 14px;
-            color: #1a73e8;
-            min-width: 120px;
-            text-align: right;
-        }
-
-        .bar-chart {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .bar-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .bar-label {
-            width: 100px;
-            font-size: 12px;
-            color: #555;
-            text-align: right;
-        }
-
-        .bar-track {
-            flex-grow: 1;
-            background: #f0f0f0;
-            height: 20px;
-            border-radius: 4px;
-            overflow: hidden;
-        }
-
-        .bar-fill {
-            height: 100%;
-            transition: width 0.3s ease;
-        }
-
-        .bar-value {
-            width: 120px;
-            font-size: 12px;
-            font-family: monospace;
-            text-align: right;
-        }
-
-    </style>
-</head>
-<body>
-
-<div class="dashboard">
-    <div class="header">
-        <h2>AI 추천 전략 성과 비교 대시보드</h2>
-        <div class="metrics">
-            <div class="metric">
-                <span>예상 전환율</span>
-                <strong id="m-cvr">5.8%</strong>
-            </div>
-            <div class="metric">
-                <span>평균 응답 속도</span>
-                <strong id="m-latency">141 ms</strong>
-            </div>
-            <div class="metric">
-                <span>월간 예상 비용</span>
-                <strong id="m-cost">₩135,000,000</strong>
-            </div>
-        </div>
+<div class="flow-container">
+    <div class="flow-node">🔹 사용자 유입</div>
+    <div class="flow-node center-node {'hybrid-node' if selected_strategy == '하이브리드(제안)' else ''}">
+        ⚙️ {selected_strategy}
     </div>
+    <div class="flow-node">✅ 구매 전환</div>
+    
+    <div class="info-particle {animation_class} p1"></div>
+    <div class="info-particle {animation_class} p2"></div>
+    <div class="info-particle {animation_class} p3"></div>
+    <div class="info-particle {animation_class} p4"></div>
+</div>
+""", unsafe_allow_html=True)
 
-    <div class="viz-container" id="viz-area">
-        <div class="badge left">사용자 유입</div>
-        <div class="badge right">구매 전환</div>
-        
-        <div class="center-node">
-            <div class="circle">
-                <svg viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" r="3"></circle>
-                    <circle cx="19" cy="5" r="2"></circle>
-                    <circle cx="5" cy="5" r="2"></circle>
-                    <circle cx="19" cy="19" r="2"></circle>
-                    <circle cx="5" cy="19" r="2"></circle>
-                    <path d="M14 10l3.5-3.5M10 10L6.5 6.5M14 14l3.5 3.5M10 14l-3.5 3.5"></path>
-                </svg>
-            </div>
-            <div class="node-label">하이브리드 AI 추천(제안)</div>
-        </div>
+# 하이브리드 AI의 우수성을 강조하는 분석 코멘트
+if selected_strategy == "하이브리드(제안)":
+    st.success("🌟 **하이브리드 AI 추천의 압도적 우위:** LLM 수준의 높은 전환율(**5.8%**)을 달성하면서도, 정보 처리 속도는 **140 ms**로 가장 빠르고 비용은 LLM 대비 **84%나 절감**됩니다.")
+elif selected_strategy == "기존 ML":
+    st.info("ℹ️ **기존 ML 분석:** 비용은 가장 저렴하지만, 데이터 분석 알고리즘의 한계로 인해 정보 처리 속도가 무겁고 **전환율이 2.1%로 매우 낮습니다.**")
+elif selected_strategy == "100% LLM":
+    st.warning("⚠️ **100% LLM 분석:** 전환율은 6.0%로 미세하게 높지만, 실시간 연산 시 **모델 병목 현상(중간 끊김 및 버벅거림)**이 발생하여 이탈률이 생길 수 있으며, 비용이 폭발적으로 증가합니다.")
+
+
+# ------------------------------------------------------------------
+# 4. 하단 비용 시뮬레이션 차트 시각화 (기존 비용 데이터 유지)
+# ------------------------------------------------------------------
+# 세 전략의 비용을 한눈에 비교할 수 있는 가로 바 플롯 디자인
+st.markdown(f"**현재 설정된 방문자 수:** {visitor_count:,} 명")
+
+# 최대 비용을 기준으로 비율 계산
+max_cost = max(ml_cost, llm_cost, hybrid_cost)
+
+st.markdown(f"""
+<div style="background-color: #f9f9f9; padding: 20px; border-radius: 15px; border: 1px solid #eee;">
+    <p style="margin-bottom:5px;">🟡 <b>기존 ML 비용:</b> ₩{ml_cost:,}</p>
+    <div style="background-color: #e0e0e0; border-radius: 8px; width: 100%; margin-bottom: 15px;">
+        <div style="background-color: #ffb74d; width: {(ml_cost/max_cost)*100}%; height: 20px; border-radius: 8px;"></div>
     </div>
-
-    <div class="chart-section">
-        <div class="chart-header">
-            <h3>방문자 수에 따른 월간 비용 시뮬레이션 (단위: 원)</h3>
-            <div class="legend">
-                <div class="legend-item"><div class="legend-color color-ml"></div> 기존 ML</div>
-                <div class="legend-item"><div class="legend-color color-llm"></div> 100% LLM</div>
-                <div class="legend-item"><div class="legend-color color-hybrid"></div> 하이브리드(제안)</div>
-            </div>
-        </div>
-
-        <div class="controls">
-            <input type="range" id="traffic-slider" min="10000" max="2000000" step="10000" value="1000000">
-            <div class="visitors-count">방문자: <span id="traffic-val">1,000,000</span>명</div>
-        </div>
-
-        <div class="bar-chart">
-            <div class="bar-row">
-                <div class="bar-label">기존 ML</div>
-                <div class="bar-track"><div class="bar-fill color-ml" id="bar-ml" style="width: 5%;"></div></div>
-                <div class="bar-value" id="val-ml">₩35,000,000</div>
-            </div>
-            <div class="bar-row">
-                <div class="bar-label">100% LLM</div>
-                <div class="bar-track"><div class="bar-fill color-llm" id="bar-llm" style="width: 90%;"></div></div>
-                <div class="bar-value" id="val-llm" style="color: #d32f2f; font-weight: bold;">₩850,000,000</div>
-            </div>
-            <div class="bar-row">
-                <div class="bar-label">하이브리드</div>
-                <div class="bar-track"><div class="bar-fill color-hybrid" id="bar-hybrid" style="width: 15%;"></div></div>
-                <div class="bar-value" id="val-hybrid">₩135,000,000</div>
-            </div>
-        </div>
+    
+    <p style="margin-bottom:5px;">🔴 <b>100% LLM 비용:</b> ₩{llm_cost:,} <span style="color:#ff1744; font-size:12px;">(하이브리드의 약 6.3배!)</span></p>
+    <div style="background-color: #e0e0e0; border-radius: 8px; width: 100%; margin-bottom: 15px;">
+        <div style="background-color: #e57373; width: {(llm_cost/max_cost)*100}%; height: 20px; border-radius: 8px;"></div>
+    </div>
+    
+    <p style="margin-bottom:5px;">🔵 <b>하이브리드(제안) 비용:</b> ₩{hybrid_cost:,} <span style="color:#2196f3; font-size:12px;">(최적의 가성비)</span></p>
+    <div style="background-color: #e0e0e0; border-radius: 8px; width: 100%;">
+        <div style="background-color: #64b5f6; width: {(hybrid_cost/max_cost)*100}%; height: 20px; border-radius: 8px;"></div>
     </div>
 </div>
-
-<script>
-    // 1. 배경 파란 점(데이터) 랜덤 생성
-    const vizArea = document.getElementById('viz-area');
-    for(let i = 0; i < 40; i++) {
-        const dot = document.createElement('div');
-        dot.className = 'dot';
-        dot.style.left = Math.random() * 90 + 5 + '%';
-        dot.style.top = Math.random() * 80 + 10 + '%';
-        // 중앙 노드 가리지 않게 투명도 조절
-        dot.style.opacity = Math.random() * 0.6 + 0.2;
-        vizArea.appendChild(dot);
-    }
-
-    // 2. 슬라이더 연동 시뮬레이션 로직
-    const slider = document.getElementById('traffic-slider');
-    const trafficVal = document.getElementById('traffic-val');
-    
-    // 지표 업데이트 DOM
-    const mCvr = document.getElementById('m-cvr');
-    const mLatency = document.getElementById('m-latency');
-    const mCost = document.getElementById('m-cost');
-
-    // 차트 업데이트 DOM
-    const barMl = document.getElementById('bar-ml');
-    const barLlm = document.getElementById('bar-llm');
-    const barHybrid = document.getElementById('bar-hybrid');
-    const valMl = document.getElementById('val-ml');
-    const valLlm = document.getElementById('val-llm');
-    const valHybrid = document.getElementById('val-hybrid');
-
-    function updateDashboard() {
-        const visitors = parseInt(slider.value);
-        trafficVal.innerText = visitors.toLocaleString();
-
-        // [비용 계산 로직]
-        const costMl = visitors * 35; 
-        const costLlm = visitors * 850; 
-        const costHybrid = visitors * 135; 
-
-        // [상단 하이브리드 지표 업데이트]
-        // 전환율은 트래픽에 따라 약간 변동되게 설정 (5.5% ~ 6.0%)
-        const cvr = (5.5 + (visitors / 4000000)).toFixed(1);
-        mCvr.innerText = cvr + '%';
-        
-        // 지연시간은 트래픽 증가시 조금씩 늘어남
-        const latency = Math.floor(120 + (visitors / 50000));
-        mLatency.innerText = latency + ' ms';
-        mCost.innerText = '₩' + costHybrid.toLocaleString();
-
-        // [하단 차트 업데이트]
-        valMl.innerText = '₩' + costMl.toLocaleString();
-        valLlm.innerText = '₩' + costLlm.toLocaleString();
-        valHybrid.innerText = '₩' + costHybrid.toLocaleString();
-
-        // Max 비용 기준을 100% LLM의 최대치(약 17억)로 설정하여 게이지 바 Width 계산
-        const maxCost = 2000000 * 850; 
-        
-        barMl.style.width = Math.max((costMl / maxCost) * 100, 1) + '%';
-        barLlm.style.width = Math.max((costLlm / maxCost) * 100, 1) + '%';
-        barHybrid.style.width = Math.max((costHybrid / maxCost) * 100, 1) + '%';
-    }
-
-    slider.addEventListener('input', updateDashboard);
-    
-    // 초기화
-    updateDashboard();
-</script>
-
-</body>
-</html>
+""", unsafe_allow_html=True)
