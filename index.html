@@ -1,1 +1,349 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 추천 전략 시뮬레이션 및 대시보드</title>
+    <style>
+        /* 공통 스타일 (전체 레이아웃) */
+        body {
+            font-family: 'Pretendard', 'Malgun Gothic', sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* 가운데 정렬 */
+            gap: 40px; /* 위아래 콘텐츠 간격 */
+        }
 
+        /* =========================================
+           1. 상단: 애니메이션 영역 스타일 
+           ========================================= */
+        .animation-container {
+            background: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            box-sizing: border-box;
+        }
+        
+        .animation-title {
+            text-align: center;
+            color: #2c3e50;
+            font-size: 24px;
+            margin: 0 0 10px 0;
+            font-weight: bold;
+        }
+
+        .track-container {
+            position: relative;
+            width: 100%;
+            height: 100px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        .label {
+            width: 150px;
+            font-weight: 800;
+            font-size: 16px;
+            color: #343a40;
+            z-index: 4;
+        }
+        .track-line {
+            position: absolute;
+            left: 170px;
+            right: 50px;
+            height: 4px;
+            background: #dee2e6;
+            z-index: 1;
+            border-radius: 2px;
+        }
+        .model-node {
+            position: absolute;
+            left: 55%;
+            transform: translateX(-50%);
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            background: #ffffff;
+            border: 4px solid #ced4da;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            color: #495057;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .model-node span {
+            font-size: 11px;
+            color: #868e96;
+            margin-top: 4px;
+        }
+        .data-dot {
+            position: absolute;
+            left: 170px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #339af0;
+            z-index: 3;
+            box-shadow: 0 0 12px rgba(51, 154, 240, 0.6);
+        }
+
+        /* 1-1. 기존 머신러닝: 빠르지만 밋밋한 흐름 */
+        .dot-ml { animation: moveML 3s infinite linear; }
+        @keyframes moveML {
+            0% { left: 170px; }
+            100% { left: calc(100% - 50px); }
+        }
+
+        /* 1-2. 100% LLM: 중앙 노드에서 병목 현상 발생 (막힘 시각화) */
+        .dot-llm { animation: moveLLM 4s infinite; }
+        .node-llm { border-color: #ffa94d; }
+        @keyframes moveLLM {
+            0% { left: 170px; background: #339af0; }
+            30% { left: calc(55% - 40px); background: #339af0; }
+            40% { left: calc(55% - 10px); background: #fa5252; transform: scale(1.3); box-shadow: 0 0 15px #fa5252; }
+            70% { left: calc(55% + 10px); background: #fa5252; transform: scale(1.3); box-shadow: 0 0 15px #fa5252; }
+            80% { left: calc(55% + 40px); background: #339af0; transform: scale(1); box-shadow: 0 0 12px rgba(51, 154, 240, 0.6); }
+            100% { left: calc(100% - 50px); background: #339af0; }
+        }
+
+        /* 1-3. 하이브리드 AI: 막힘없이 아주 부드럽고 빠른 흐름 */
+        .dot-hybrid { 
+            animation: moveHybrid 2s infinite linear; 
+            background: #20c997; 
+            box-shadow: 0 0 15px rgba(32, 201, 151, 0.8);
+        }
+        .node-hybrid { border-color: #20c997; }
+        @keyframes moveHybrid {
+            0% { left: 170px; }
+            100% { left: calc(100% - 50px); }
+        }
+
+
+        /* =========================================
+           2. 하단: 대시보드 시뮬레이터 스타일 
+           ========================================= */
+        .dashboard {
+            background: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 800px;
+            box-sizing: border-box;
+        }
+        .dashboard h1 {
+            text-align: center;
+            color: #2c3e50;
+            font-size: 24px;
+            margin-top: 0;
+            margin-bottom: 30px;
+        }
+        .control-panel {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #34495e;
+        }
+        select, input[type="range"] {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        .slider-value {
+            text-align: right;
+            font-weight: bold;
+            color: #e74c3c;
+            margin-top: 5px;
+        }
+        .results {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+        }
+        .card {
+            flex: 1;
+            background: #ecf0f1;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .card h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            color: #7f8c8d;
+        }
+        .card .value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #2980b9;
+        }
+        .card .desc {
+            font-size: 12px;
+            color: #95a5a6;
+            margin-top: 10px;
+        }
+        .warning { color: #e74c3c !important; }
+        .success { color: #27ae60 !important; }
+
+        /* 모바일 대응 반응형 처리 */
+        @media (max-width: 600px) {
+            .results { flex-direction: column; }
+            .track-container { padding: 0 10px; }
+            .label { width: 100px; font-size: 14px; }
+            .track-line, .data-dot { left: 110px; }
+            .model-node { width: 70px; height: 70px; font-size: 12px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="animation-container">
+        <div class="animation-title">🔄 데이터 처리 흐름 시각화</div>
+        
+        <div class="track-container">
+            <div class="label">기존 머신러닝</div>
+            <div class="track-line"></div>
+            <div class="model-node">기존 ML<span>단순 통과</span></div>
+            <div class="data-dot dot-ml"></div>
+        </div>
+
+        <div class="track-container">
+            <div class="label">100% 실시간 LLM</div>
+            <div class="track-line"></div>
+            <div class="model-node node-llm">LLM<span>병목/응답지연</span></div>
+            <div class="data-dot dot-llm"></div>
+        </div>
+
+        <div class="track-container">
+            <div class="label">하이브리드 AI</div>
+            <div class="track-line"></div>
+            <div class="model-node node-hybrid">Hybrid<span>막힘없는 흐름</span></div>
+            <div class="data-dot dot-hybrid"></div>
+        </div>
+    </div>
+
+    <div class="dashboard">
+        <h1>🚀 AI 추천 전략 성과 비교 시뮬레이터</h1>
+        
+        <div class="control-panel">
+            <div class="form-group">
+                <label for="strategy">AI 추천 전략 선택</label>
+                <select id="strategy">
+                    <option value="ml">1. 기존 머신러닝 추천 (가볍지만 정확도 낮음)</option>
+                    <option value="llm">2. 100% 실시간 LLM 추천 (정확하지만 무거움)</option>
+                    <option value="hybrid" selected>3. 하이브리드 AI 추천 (제안 모델)</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="visitors">일일 방문자 수 (트래픽 규모)</label>
+                <input type="range" id="visitors" min="10000" max="1000000" step="10000" value="100000">
+                <div class="slider-value"><span id="visitors-display">100,000</span> 명</div>
+            </div>
+        </div>
+
+        <div class="results">
+            <div class="card">
+                <h3>예상 구매 전환율</h3>
+                <div class="value" id="cvr-value">0%</div>
+                <div class="desc">방문자 대비 구매 비율</div>
+            </div>
+            <div class="card">
+                <h3>서버 응답 시간</h3>
+                <div class="value" id="latency-value">0 ms</div>
+                <div class="desc">고객 화면 로딩 시간</div>
+            </div>
+            <div class="card">
+                <h3>월간 인프라 비용</h3>
+                <div class="value" id="cost-value">0 원</div>
+                <div class="desc">클라우드 서버 유지비</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const strategySelect = document.getElementById('strategy');
+        const visitorsSlider = document.getElementById('visitors');
+        const visitorsDisplay = document.getElementById('visitors-display');
+        
+        const cvrValue = document.getElementById('cvr-value');
+        const latencyValue = document.getElementById('latency-value');
+        const costValue = document.getElementById('cost-value');
+
+        function calculateMetrics() {
+            const strategy = strategySelect.value;
+            const visitors = parseInt(visitorsSlider.value);
+            
+            visitorsDisplay.innerText = visitors.toLocaleString();
+
+            let cvr, latency, cost;
+
+            // 전략별 수치 계산 로직
+            if (strategy === 'ml') {
+                cvr = 2.5; // 전환율 2.5% 고정
+                latency = 50 + (visitors / 50000); // 매우 빠름
+                cost = visitors * 15; // 저렴한 유지비
+            } else if (strategy === 'llm') {
+                cvr = 5.2; // 전환율은 가장 높음
+                latency = 1500 + (visitors / 500); // 트래픽 증가시 응답시간 폭증
+                cost = visitors * 450; // 막대한 GPU 비용
+            } else if (strategy === 'hybrid') {
+                cvr = 4.8; // LLM에 근접한 높은 전환율
+                latency = 120 + (visitors / 15000); // ML과 비슷한 빠른 속도
+                cost = visitors * 60; // 오프라인 배치 처리로 비용 절감
+            }
+
+            // 화면에 결과 출력 및 색상 스타일링
+            cvrValue.innerText = cvr.toFixed(1) + '%';
+            cvrValue.className = 'value ' + (cvr > 4 ? 'success' : '');
+
+            latencyValue.innerText = Math.round(latency).toLocaleString() + ' ms';
+            latencyValue.className = 'value ' + (latency > 1000 ? 'warning' : 'success');
+
+            // 비용은 만원 단위로 변환
+            const costInManwon = Math.round(cost / 10000);
+            costValue.innerText = costInManwon.toLocaleString() + ' 만원';
+            costValue.className = 'value ' + (costInManwon > 10000 ? 'warning' : '');
+        }
+
+        // 이벤트 리스너 등록
+        strategySelect.addEventListener('change', calculateMetrics);
+        visitorsSlider.addEventListener('input', calculateMetrics);
+
+        // 초기 실행
+        calculateMetrics();
+    </script>
+
+</body>
+</html>
