@@ -105,6 +105,11 @@
             z-index: 3;
             box-shadow: 0 0 12px rgba(51, 154, 240, 0.6);
         }
+                /* 1-1. 기존 머신러닝: 빠르지만 밋밋한 흐름 */
+        .dot-ml { animation: moveML 3s infinite linear; }
+        @keyframes moveML {
+            0% { left: 170px; }
+            100% { left: calc(100% - 50px); }
 
 
         }
